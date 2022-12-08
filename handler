@@ -1,0 +1,60 @@
+public class trgController
+{
+    public static void trgMethod(Map<Id,Opportunity> newMap,Map<Id,Opportunity> oldMap)
+    {
+        Set<Id> accIds = new Set<Id>();
+        
+        for(Opportunity newOpp : newMap.values())
+        {
+            if(oldMap != null)
+            {
+                Opportunity oldOpp = oldMap.get(newOpp.Id);
+                
+                if(oldOpp.AccountId != newOpp.AccountId)
+                {
+                    accIds.add(oldOpp.AccountId);
+                    accIds.add(newOpp.AccountId);
+                }
+                else 
+                {
+                    accIds.add(newOpp.AccountId);
+                }
+            }
+            else 
+            {
+                accIds.add(newOpp.AccountId);
+            }
+        }
+        
+        List<AggregateResult> aggrList = [Select AccountId accId,sum(Amount)totalAmount from Opportunity where AccountId != null 
+                                         and AccountId IN : accIds group by AccountId];
+        Map<Id,Account> accMap = new Map<Id,Account>();
+        
+        if(!accIds.isEmpty())
+        {
+            for(Id ids : accIds)
+            {
+                Account acc = new Account();
+                acc.Id = ids;
+                acc.Total_Salary__c = 0;
+                accMap.put(acc.Id,acc);
+            }
+        }
+        
+        if(!aggrList.isEmpty())
+        {
+            for(AggregateResult aggr : aggrList)
+            {
+                Account acc = new Account();
+                acc.Id = (Id)aggr.get('accId');
+                acc.Total_Salary__c = (Decimal)aggr.get('totalAmount');
+                accMap.put(acc.Id,acc);
+            }
+        }
+        
+        if(accMap != null)
+        {
+            update accMap.values();
+        }
+    }
+}
